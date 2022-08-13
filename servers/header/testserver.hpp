@@ -11,6 +11,7 @@ namespace HDE
     private:
         char buffer[30000] = {0};
         int new_socket;
+        sockaddr_in clnt_addr;  //用于保存客户端的信息
         void accepter();
         void handler();
         void responder();
