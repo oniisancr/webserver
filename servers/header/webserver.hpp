@@ -3,8 +3,10 @@
 #include "simpleserver.hpp"
 #include "simpleweb.hpp"
 #include <unistd.h> //write read
+#include <sys/epoll.h>
 
 #define BUFSZ 30000
+#define EPOLLSZ 50
 
 namespace HDE
 {
@@ -13,11 +15,14 @@ namespace HDE
     private:
         char buffer[BUFSZ] = {0};
         int server_sock;
-        int new_socket;
+        int clnt_socket;
         sockaddr_in clnt_addr; //用于保存客户端的信息
-        int fd_max;
-        fd_set reads, copy_reads;
-        timeval timeout;
+        int epfd;
+        epoll_event *epoll_evens;
+        epoll_event event;
+        int event_cnt;
+        int timeout;
+
         std::string target_url;
         void accepter();
         void handler();
@@ -25,6 +30,7 @@ namespace HDE
 
     public:
         WebServer();
+        ~WebServer();
         void launch();
     };
 }
