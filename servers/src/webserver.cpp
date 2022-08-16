@@ -8,9 +8,13 @@ HDE::WebServer::WebServer() : SimpleServer(AF_INET, SOCK_STREAM, 0, 80, INADDR_A
     // initate epfd
     epfd = epoll_create(EPOLLSZ);
     server_sock = get_socket()->get_sock();
+    //set nonblock socket
+    int flag = fcntl(server_sock,F_GETFL,0);
+    fcntl(server_sock,F_SETFL,flag|O_NONBLOCK);
+
     epoll_evens = new epoll_event[EPOLLSZ];
-    //watch server fd
-    event.events = EPOLLIN;
+    //watch server fd  (edge-triggered)
+    event.events = EPOLLIN|EPOLLET;
     event.data.fd = server_sock;
     epoll_ctl(epfd,EPOLL_CTL_ADD,server_sock,&event);
 }
@@ -23,7 +27,11 @@ void HDE::WebServer::accepter()
 {
     int addrlen = sizeof(clnt_addr);
     clnt_socket = accept(server_sock, (sockaddr *)&clnt_addr, (socklen_t *)&addrlen);
-    event.events = EPOLLIN;
+    //set nonblock socket
+    int flag = fcntl(clnt_socket,F_GETFL,0);
+    fcntl(clnt_socket,F_SETFL,flag|O_NONBLOCK);
+    //edge-triggered
+    event.events = EPOLLIN|EPOLLET;
     event.data.fd = clnt_socket;
     epoll_ctl(epfd,EPOLL_CTL_ADD,clnt_socket,&event);
 }
@@ -33,9 +41,9 @@ void HDE::WebServer::handler()
     string url = "";
     int cnt = 0;
     // 取出需要的页面 在第一个空格到第二个空格之间 仅实现GET请求
-    for (int i = 0; i<BUFSZ&&buffer[i]!='\0'; i++)
+    for (int i = 0; i<clnt_data.size(); i++)
     {
-        char c = buffer[i];
+        char c = clnt_data[i];
         if (cnt == 1 && c != ' ' && c != '/')
             url += c;
         if (c == ' ')
@@ -77,10 +85,20 @@ void HDE::WebServer::launch()
             }
             else
             { //需要读取并处理用户的socket
+                clnt_data.clear();
                 clnt_socket = epoll_evens[i].data.fd;
-                // short connnection doesn't consider the sticky packet problem
-                int str_len=read(clnt_socket, buffer, BUFSZ-1);
-                buffer[str_len]='\0';
+                // cuz it's edge-triggered, need to read all buffer clearly
+                int str_len=0;
+                while(true)
+                {
+                    // 0:EOF -1:error
+                    str_len=read(clnt_socket, buffer, BUFSZ-1);
+                    //empty buffer  
+                    if(str_len == -1 && errno == EAGAIN)
+                        break;
+                    buffer[str_len]='\0';
+                    clnt_data += std::string(buffer);
+                }
                 handler();
                 responder();
                 // delete client socket

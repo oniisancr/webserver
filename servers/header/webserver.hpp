@@ -4,8 +4,10 @@
 #include "simpleweb.hpp"
 #include <unistd.h> //write read
 #include <sys/epoll.h>
+#include <fcntl.h>
+#include <errno.h>
 
-#define BUFSZ 30000
+#define BUFSZ 5
 #define EPOLLSZ 50
 
 namespace HDE
@@ -16,6 +18,7 @@ namespace HDE
         char buffer[BUFSZ] = {0};
         int server_sock;
         int clnt_socket;
+        std::string clnt_data;
         sockaddr_in clnt_addr; //用于保存客户端的信息
         int epfd;
         epoll_event *epoll_evens;
