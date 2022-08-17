@@ -3,12 +3,10 @@
 #include "simpleserver.hpp"
 #include "simpleweb.hpp"
 #include <unistd.h> //write read
-#include <sys/epoll.h>
 #include <fcntl.h>
 #include <errno.h>
-
-#define BUFSZ 5
-#define EPOLLSZ 50
+#include "kqueuepoller.hpp"
+#define BUFSZ 2048
 
 namespace HDE
 {
@@ -20,11 +18,8 @@ namespace HDE
         int clnt_socket;
         std::string clnt_data;
         sockaddr_in clnt_addr; //用于保存客户端的信息
-        int epfd;
-        epoll_event *epoll_evens;
-        epoll_event event;
-        int event_cnt;
         int timeout;
+        SimplePoller *poller;   //封装IO复用，实现跨平台
 
         std::string target_url;
         void accepter();
