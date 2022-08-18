@@ -19,6 +19,7 @@ void HDE::KququePoller::initate()
     flag_event = EV_ADD | EV_ENABLE | EV_CLEAR;
     if (!edge_triggered)
         flag_event = EV_ADD | EV_ENABLE;
+    //设置changelist的第一个结构体
     EV_SET(changelist, server_socket, EVFILT_READ, flag_event, 0, 0, 0);
     if (kevent(kq, changelist, 1, NULL, 0, NULL) == -1)
     {
@@ -28,7 +29,6 @@ void HDE::KququePoller::initate()
 }
 void HDE::KququePoller::add_socket(int skt)
 {
-    sockaddr_in clnt_addr;
     //设置是否阻塞
     fcntl(skt, F_SETFL, flag_socket);
     //注册该socket  每次注册1个socket
@@ -40,6 +40,7 @@ void HDE::KququePoller::add_socket(int skt)
 }
 void HDE::KququePoller::free_socket(int skt)
 {
+    EV_SET(changelist, skt, EVFILT_READ, EV_DELETE, 0, 0, 0);
 }
 int HDE::KququePoller::watch(int time_out = -1)
 {

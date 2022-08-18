@@ -5,7 +5,13 @@
 #include <unistd.h> //write read
 #include <fcntl.h>
 #include <errno.h>
-#include "kqueuepoller.hpp"
+#ifdef IS_MACOS
+    #include "kqueuepoller.hpp"
+#elif IS_LINUX
+    #include "epoller.hpp"
+#endif
+
+
 #define BUFSZ 2048
 
 namespace HDE
@@ -19,7 +25,7 @@ namespace HDE
         std::string clnt_data;
         sockaddr_in clnt_addr; //用于保存客户端的信息
         int timeout;
-        SimplePoller *poller;   //封装IO复用，实现跨平台
+        SimplePoller *poller; //封装IO复用，实现跨平台
 
         std::string target_url;
         void accepter();

@@ -5,7 +5,14 @@ HDE::WebServer::WebServer() : SimpleServer(AF_INET, SOCK_STREAM, 0, 80, INADDR_A
     timeout = -1;
     server_sock = get_socket()->get_sock();
     // 非阻塞 边缘触发
+#ifdef IS_MACOS
     poller = new KququePoller(server_sock, true, true);
+#elif IS_LINUX
+    poller = new Epoller(server_sock, true, true);
+#else
+    std::cout<<"Does not support this system"<<std::endl;
+#endif
+
 }
 HDE::WebServer::~WebServer()
 {
