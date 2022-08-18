@@ -5,25 +5,22 @@
 #include <unistd.h> //write read
 #include <fcntl.h>
 #include <errno.h>
+#include "threadpool.hpp"
+#include "eventhandler.hpp"
 #ifdef IS_MACOS
-    #include "kqueuepoller.hpp"
+#include "kqueuepoller.hpp"
 #elif IS_LINUX
-    #include "epoller.hpp"
+#include "epoller.hpp"
 #endif
-
-
-#define BUFSZ 2048
 
 namespace HDE
 {
     class WebServer : public SimpleServer
     {
     private:
-        char buffer[BUFSZ] = {0};
+        int thread_count;
+        ThreadPool *pool;
         int server_sock;
-        int clnt_socket;
-        std::string clnt_data;
-        sockaddr_in clnt_addr; //用于保存客户端的信息
         int timeout;
         SimplePoller *poller; //封装IO复用，实现跨平台
 

@@ -6,7 +6,7 @@ include(CTest)
 enable_testing()
 include_directories(/usr/local/include sockets/header sockets/src servers/header servers/src web/header web/src)
 
-add_executable(webserver main.cpp servers/src/simplepoller.cpp web/src/simpleweb.cpp servers/src/webserver.cpp servers/src/simpleserver.cpp sockets/src/simplesocket.cpp
+add_executable(webserver main.cpp servers/src/eventhandler.cpp servers/src/threadpool.cpp servers/src/simplepoller.cpp web/src/simpleweb.cpp servers/src/webserver.cpp servers/src/simpleserver.cpp sockets/src/simplesocket.cpp
     sockets/src/bindingsocket.cpp sockets/src/listeningsocket.cpp)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -16,6 +16,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         servers/header/epoller.hpp
         servers/src/epoller.cpp
     )
+    #pthread不是Linux下的默认的库，需要链接上
+    target_link_libraries(webserver pthread)
     target_compile_definitions(webserver PUBLIC "IS_LINUX")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     message(STATUS "Configuring on/for macOS")
