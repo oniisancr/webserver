@@ -1,50 +1,29 @@
 #include "webserver.hpp"
 
-// reference: https://dev.to/frevib/a-tcp-server-with-kqueue-527
-
 HDE::WebServer::WebServer() : SimpleServer(AF_INET, SOCK_STREAM, 0, 80, INADDR_ANY, 10)
 {
-    // timeout.tv_sec = 0;
-    // timeout.tv_nsec = 0;
+    timeout = -1;
     server_sock = get_socket()->get_sock();
-    kq = kqueue();
-    // 设置非阻塞socket read和write等不会阻塞
-    int flag = fcntl(server_sock, F_GETFL, 0);
-    fcntl(server_sock, F_SETFL, flag | O_NONBLOCK);
-    // 初始化事件列表
-    changelist = new struct kevent[KQUEUESZ];
-    events = new struct kevent[KQUEUESZ];
-    //注册server_socket监听事件  边缘触发EV_CLEAR
-    EV_SET(changelist, server_sock, EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, 0);
-    if (kevent(kq, changelist, 1, NULL, 0, NULL) == -1)
-    {
-        perror("kevent error");
-    }
+    // 非阻塞 边缘触发
+#ifdef IS_MACOS
+    poller = new KququePoller(server_sock, true, true);
+#elif IS_LINUX
+    poller = new Epoller(server_sock, true, true);
+#else
+    std::cout<<"Does not support this system"<<std::endl;
+#endif
+
 }
 HDE::WebServer::~WebServer()
 {
-    delete[] changelist;
-    delete[] events;
+    delete poller;
 }
 
 void HDE::WebServer::accepter()
 {
     int addrlen = sizeof(clnt_addr);
     clnt_socket = accept(server_sock, (sockaddr *)&clnt_addr, (socklen_t *)&addrlen);
-    if (clnt_socket == -1)
-    {
-        perror("Accept socket error");
-        return;
-    }
-    // 设置非阻塞socket
-    int flag = fcntl(clnt_socket, F_GETFL, 0);
-    fcntl(clnt_socket, F_SETFL, flag | O_NONBLOCK);
-    //注册该socket  每次注册1个socket
-    EV_SET(changelist, clnt_socket, EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0, 0);
-    if (kevent(kq, changelist, 1, NULL, 0, NULL) == -1)
-    {
-        perror("kevent add error");
-    }
+    poller->add_socket(clnt_socket);
 }
 void HDE::WebServer::handler()
 {
@@ -74,37 +53,31 @@ void HDE::WebServer::responder()
 }
 void HDE::WebServer::launch()
 {
-    int new_events = 0;
+    int event_cnt = 0;
     while (true)
     {
         std::cout << "=====WAITING===== " << std::endl;
-        if ((new_events = kevent(kq, nullptr, 0, events, KQUEUESZ, nullptr)) == -1)
+        if ((event_cnt = poller->watch(timeout)) == -1)
         {
-            std::cout << "kevevt error...try again" << std::endl;
+            std::cout << "epoll_wait error...try again" << std::endl;
             continue;
         }
         // time out
-        if (new_events == 0)
+        if (event_cnt == 0)
             continue;
 
-        for (int i = 0; i < new_events; i++)
+        for (int i = 0; i < event_cnt; i++)
         {
-            int event_fd = events[i].ident;
-            // 断开链接 客户端发送EOF后，kqueue会自动删除相关事件
-            if (events[i].flags & EV_EOF)
-            {
-                close(event_fd);
-                continue;
-            }
-            if (event_fd == server_sock) //有新的连接请求
+            int temp_socket = poller->eventsVec[i];
+            if (temp_socket == server_sock) //有新的连接请求
             {
                 accepter();
             }
-            else if (events[i].filter & EVFILT_READ)
+            else
             { //需要读取并处理用户的socket
                 clnt_data.clear();
-                clnt_socket = event_fd;
-                // 由于是边缘触发EV_CLEAR，所以需要一次读完缓冲
+                clnt_socket = temp_socket;
+                // cuz it's edge-triggered, need to read all buffer clearly
                 int str_len = 0;
                 while (true)
                 {
@@ -118,6 +91,8 @@ void HDE::WebServer::launch()
                 }
                 handler();
                 responder();
+                // delete client socket
+                poller->free_socket(clnt_socket);
                 close(clnt_socket);
             }
         }

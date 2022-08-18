@@ -2,15 +2,17 @@
 #define __WEBSERVER_H__
 #include "simpleserver.hpp"
 #include "simpleweb.hpp"
-#include <new>
 #include <unistd.h> //write read
 #include <fcntl.h>
-#include <sys/event.h> //kevent
-#include <sys/types.h>
-#include <string>
+#include <errno.h>
+#ifdef IS_MACOS
+    #include "kqueuepoller.hpp"
+#elif IS_LINUX
+    #include "epoller.hpp"
+#endif
+
 
 #define BUFSZ 2048
-#define KQUEUESZ 10
 
 namespace HDE
 {
@@ -18,14 +20,13 @@ namespace HDE
     {
     private:
         char buffer[BUFSZ] = {0};
-        std::string clnt_data;
         int server_sock;
         int clnt_socket;
+        std::string clnt_data;
         sockaddr_in clnt_addr; //用于保存客户端的信息
-        int kq;
-        struct kevent *changelist; //每次注册事件
-        struct kevent *events;     //每次返回事件
-        timespec timeout;
+        int timeout;
+        SimplePoller *poller; //封装IO复用，实现跨平台
+
         std::string target_url;
         void accepter();
         void handler();
