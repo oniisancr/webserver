@@ -10,6 +10,12 @@ HDE::EventHandler::~EventHandler()
 }
 void HDE::EventHandler::handler()
 {
+    // 只处理GET请求
+    if (clnt_data.find("HTTP/") == std::string::npos||clnt_data.find("GET") == std::string::npos)
+    {
+        target_url = "";
+        return;
+    }
     string url = "";
     int cnt = 0;
     // 取出需要的页面 在第一个空格到第二个空格之间 仅实现GET请求
@@ -35,6 +41,7 @@ void HDE::EventHandler::handler()
 }
 void HDE::EventHandler::responder()
 {
+    if(target_url.empty()) return;
     SimpleWeb web(target_url);
     //客户端已经 断开
     if (-1 == write(clnt_socket, string(web).c_str(), string(web).size()) && errno == EPIPE)

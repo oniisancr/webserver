@@ -12,16 +12,18 @@ HDE::SimpleSocket::SimpleSocket(int domain, int type, int protocol, int port,
 {
     // 定义结构体
     address.sin_family = domain;
-    address.sin_port = htons(port); // htons() 16位的主机字节序转换到网络字节序 大端模式
-    address.sin_addr.s_addr = htonl(interface); //host to net long 32位的主机字节序转换到网络字节序
+    address.sin_port = htons(port);             // htons() 16位的主机字节序转换到网络字节序 大端模式
+    address.sin_addr.s_addr = htonl(interface); // host to net long 32位的主机字节序转换到网络字节序
     // 创建服务器套接字
     sock = socket(domain, type, protocol);
     test_connection(sock);
-    
+}
+HDE::SimpleSocket::~SimpleSocket()
+{
 }
 void HDE::SimpleSocket::test_connection(int item_to_test)
 {
-    if(item_to_test<0)
+    if (item_to_test < 0)
     {
         perror("Failed to connect...");
         exit(EXIT_FAILURE);

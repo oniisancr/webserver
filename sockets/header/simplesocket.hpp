@@ -16,6 +16,7 @@ namespace HDE
 
     public:
         SimpleSocket(int domain, int type, int protocol, int port, u_long interface);
+        virtual ~SimpleSocket();
         // bind(for server) or connect(for client)
         // 不同sock有不同的行为
         virtual int connect_to_network(int sock, sockaddr_in addr) = 0;

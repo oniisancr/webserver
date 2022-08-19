@@ -1,9 +1,9 @@
 #include "webserver.hpp"
 
-HDE::WebServer::WebServer() : SimpleServer(AF_INET, SOCK_STREAM, 0, 80, INADDR_ANY, 10)
+HDE::WebServer::WebServer(int port) : SimpleServer(AF_INET, SOCK_STREAM, 0, port, INADDR_ANY, 10)
 {
     thread_count = std::thread::hardware_concurrency();
-    
+
     timeout = -1;
     server_sock = get_socket()->get_sock();
     // 非阻塞 边缘触发
@@ -31,7 +31,7 @@ void HDE::WebServer::accepter()
 }
 void HDE::WebServer::launch()
 {
-    pool->start();  //启用线程池，处理客户业务
+    pool->start(); //启用线程池，处理客户业务
     std::cout << "=====Server Start!===== " << std::endl;
     int event_cnt = 0;
     while (true)

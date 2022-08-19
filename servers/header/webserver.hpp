@@ -30,7 +30,7 @@ namespace HDE
         void responder();
 
     public:
-        WebServer();
+        WebServer(int port = 80);
         ~WebServer();
         void launch();
     };
